@@ -3,6 +3,10 @@
 #include <SPI.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <WebSocketsClient.h>
+
+
+
 
 //bits para atuar a entrada digital do inversor. Necessário utilizar o "run" para ligar e desligar o inversor, 
 //mesmo usando a entrada analógica.
@@ -29,7 +33,6 @@ IPAddress gateway(192, 168, 0, 1);  //wireless
 IPAddress subnet(255, 255, 0, 0);   //wireless
 WiFiServer sv(PORTA); //socket
 WiFiClient cl;        //socket
-
 // configurações e modos
 bool closeAfterRec = false; // o host fecha o  apos receber a mensagem
 bool estadoled = 0;
@@ -61,6 +64,8 @@ int valorRecebido = 1; //armazena o valor recebido via TCP em um int
 char mode = 'd'; //modo de saida selecionado
 
 
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //SETUP e LOOP
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,7 +75,6 @@ void setup() {
   setupPins();
   setupWireless();
   setupOTA();
-  
   launchTasks(); 
 }
 
@@ -98,6 +102,7 @@ void taskCheckConnCode (void * parameters) {
 
 void taskTcpCode(void * parameters) {
   for (;;) {
+
     if (cl.connected()) {
         if (cl.available() > 0) {
           int i = 0;

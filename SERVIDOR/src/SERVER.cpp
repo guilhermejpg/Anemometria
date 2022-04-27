@@ -1,5 +1,10 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WebSockets.h>
+#include <WebSocketsClient.h>
+#include <WebSocketsServer.h>
+#include <WebSocketsVersion.h>
+
 #define PERIODO 1000 //periodo de reconexao e update em ms
 
 
@@ -7,20 +12,21 @@
 /*------------VARIAVEIS-GLOBAIS--------*/
 bool estadoled = 0;      
 const char* ssid = "gvento";    //Nome da rede
-const char* senha =  "anemometria";   // Senha da rede
+const char* senha =  "anemometria";   // Senha da i
 String valor_recebido;          // String para valor recebido via Serial                           
 /*---------------------------------------*/
 
 
-/*-------------PARAMENTROS WIFI--------*/
-WiFiClient client;    //Criando cliente wifi                                       
+/*-------------PARAMENTROS WIFI--------*/                                   
 WiFiServer server(80);  // porta do servidor, padrão 80
 IPAddress local_IP(192,168,4,169);  //wireless
 IPAddress gateway(192, 168, 0, 1);  //wireless
 IPAddress subnet(255, 255, 0, 0);   //wireless
 /*---------------------------------------*/
 
+/*-------------VOID PADRÃO WEBSOCKET--------*/
 
+/*---------------------------------------*/
 
 /*-------------FUNÇÕES--------*/
 void setupServer();   // Setup Servidor
@@ -78,6 +84,7 @@ void setupServer(){  //Configuração do Incial do servidor
 void openServer(){  //Abrindo o servidor 
   WiFiClient client = server.available();
   Serial.println("Abrindo Servidor");
+  Serial.println(WiFi.localIP());
   delay(200);
    Serial.println("Servidor Online");
 }
@@ -116,6 +123,8 @@ if(Serial.available()>0){    // SE TIVER ALGUM DADO NA SERIAL
         estadoled =! estadoled;
         digitalWrite(23,estadoled);
       }
+        
+
 }
 
 }
