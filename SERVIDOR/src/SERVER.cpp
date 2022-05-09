@@ -1,130 +1,110 @@
-#include <Arduino.h>
-#include <WiFi.h>
-#include <WebSockets.h>
-#include <WebSocketsClient.h>
-#include <WebSocketsServer.h>
-#include <WebSocketsVersion.h>
+// Nome : Servidor anemômetria 
 
-#define PERIODO 1000 //periodo de reconexao e update em ms
+/* esse projeto é a criação de um servidor e um acess point(AP) a partir de um ESP32
+O esp disponibilza uma rede e um servidor para enviar comandos para o tunel( alterar rotação) via TCP
+O projeto trabalhara em conjunto ao script em python para enviar os comandos via Serial para o server, e o server 
+enviar os comandos via TCP/IP.
+O Processador 1 é dedicado a conexão, envio de dados e leitura Serial
+O processador 0 está livre
+
+ // IP SERVER 192.168.4.1
+ // Ip do TUNEL 192.168.4.2
+
+
+/*---------------------------------------*/
+#include <Arduino.h>       // BIBLIOTECA PADRÃO
+#include <WiFi.h>          // BIBLIOTECA  WIFI
+#include <WiFiServer.h>    // BIBLIOTECA SERVER  
+#define PERIODO 500        // Periodo de reconexao e update em ms
 
 
 
 /*------------VARIAVEIS-GLOBAIS--------*/
-bool estadoled = 0;      
-const char* ssid = "gvento";    //Nome da rede
-const char* senha =  "anemometria";   // Senha da i
-String valor_recebido;          // String para valor recebido via Serial                           
+static uint8_t taskCoreOne = 1;   // core 1 para tasks ()
+static uint8_t taskCoreZero = 0;  // Core  0 para tasks ()
+bool estadoled = 0;               // Estado do led para       
+String recebido;                  // String para leitura da Serial
+String leSerial(){                // FUNÇÃO PARA LER A SERIAL
+  String conteudo = "";
+  char caractere;
+  
+  // Enquanto receber algo pela serial
+  while(Serial.available() > 0) {
+    // Lê byte da serial
+    caractere = Serial.read();
+    // Ignora caractere de quebra de linha
+    if (caractere != '\n'){
+      // Concatena valores
+      conteudo.concat(caractere);
+    }
+    // Aguarda buffer serial ler próximo caractere
+    delay(10);
+  }
+    
+  Serial.print("Recebi: ");
+  Serial.println(conteudo);
+    
+  return conteudo;
+}           
 /*---------------------------------------*/
 
 
 /*-------------PARAMENTROS WIFI--------*/                                   
-WiFiServer server(80);  // porta do servidor, padrão 80
-IPAddress local_IP(192,168,4,169);  //wireless
-IPAddress gateway(192, 168, 0, 1);  //wireless
-IPAddress subnet(255, 255, 0, 0);   //wireless
+const char* ssid = "gvento";          // Nome da rede
+const char* senha =  "anemometria";   // Senha da rede
+WiFiServer  Server(80);               // Porta do Servidor - (80)
+WiFiClient  tunelClient;              // cliente direcionado ao tunel 
 /*---------------------------------------*/
 
-/*-------------VOID PADRÃO WEBSOCKET--------*/
-
-/*---------------------------------------*/
 
 /*-------------FUNÇÕES--------*/
-void setupServer();   // Setup Servidor
-void openServer();    // Abrindo servidor para conexão
-void launchTasks();   // inicia as tasks
-void CheckSerial();   // Monitora a serial
+void setupWifi();   // Setup Servidor
+void launchTasks();   // Inicia as tasks
 /*---------------------------------------*/
-
-
-
-/*-------------TASKS--------*/
-TaskHandle_t taskClient;
-void taskCheckClient(void * parameters);  //Checa periodicamente o wifi e verifica se tem atualização
-/*---------------------------------------*/
-
-
-
-/*-------------OUTROS--------*/
-int const coreTask = 0; //Core onde rodarão as tasks nao relacionadas a comunicação (controle do pot/saidas digitais no caso)
-/*---------------------------------------*/
-
 
 
 /*-------------VOID-SETUP-------------*/
 void setup() {
-Serial.begin(115200);   // Iniciando o serial com baudrate de 115200
-Serial.setTimeout(200); // Limitando o delay de respota entre serial - esp
-setupServer();          // chamando a função 
-launchTasks();          // chamando a função 
-pinMode(23,OUTPUT); 
+Serial.begin(115200);               // Iniciando o serial com baudrate de 115200
+Serial.setTimeout(200);             // Limitando o delay de respota entre serial - esp
+setupWifi();                        // Chamando a função de Setup do Wifi
+launchTasks();                      // Chamando a função que Inicia as tasks
+Server.begin();                     // Inicia o server
+tunelClient = Server.available();   // disponibiliza o servidor para o cliente
+pinMode(23,OUTPUT);     
 digitalWrite(23, estadoled);
 }
 /*---------------------------------------*/
 
 
-
-
-
 void loop() {
-  CheckSerial();
-  //vTaskDelete(NULL); //não utiliza o void loop. As tasks lançadas no launchTasks. 
-}
-
-void setupServer(){  //Configuração do Incial do servidor
-  if(!WiFi.softAPConfig(local_IP,gateway,subnet)){}             //configura o ip estatico
-  WiFi.mode(WIFI_AP); // MODO ESTACÃO/PONTO DE ACESSO
-  WiFi.softAP(ssid,senha);  // login e senha da rede
-  server.begin(); // inicia o server
-  Serial.println("Configurando servidor");
-  delay(100);
-  openServer(); // CHAMANDO A FUNÇÃO
-  
-}
-
-void openServer(){  //Abrindo o servidor 
-  WiFiClient client = server.available();
-  Serial.println("Abrindo Servidor");
-  Serial.println(WiFi.localIP());
-  delay(200);
-   Serial.println("Servidor Online");
-}
-
-void launchTasks(){ // lança as taks
-  delay(2000);
-  xTaskCreatePinnedToCore(taskCheckClient,"SERVIDOR",5000,NULL,1,&taskClient,CONFIG_ARDUINO_RUNNING_CORE);
-}
-
-void taskCheckClient (void * parameters) {   // CHECA SE TEM CLIENTE E DISPONIBILZA O SERVER
-  for (;;) {
-    WiFiClient client = server.available();
-  if (client) {
-    if (client.connected()) {
-      Serial.println("Connected to client");
-    }
-      vTaskDelay(PERIODO/portTICK_PERIOD_MS);
-  
-}
+  if(tunelClient){
+  if(tunelClient.connected()){ //SE  O CLIENTE ESTA CONECTADO            
+      digitalWrite(23,HIGH);
+      delay(150);
+      digitalWrite(23,LOW);
+      delay(150);
+       recebido = leSerial();    // chama a função que le a serial e armazena na variavel
+       tunelClient.print(recebido);   // print  e flush devem trabalhar em conjunto para escrever dados
+       tunelClient.flush();
+       delay(500);
+       tunelClient.stop();
   }
+  }
+  if(!tunelClient){     // Server online aguardando cliente
+  digitalWrite(23,HIGH);
+  tunelClient = Server.available();
+   }
+delay(200);
+  }
+
+
+void setupWifi(){       // SETUP WIFI
+  WiFi.mode(WIFI_AP);                 // Coloca este ESP como Access Point
+  WiFi.softAP(ssid,senha);            // Login e senha da rede
 }
 
-void CheckSerial(){   // LE DADOS DA SERIAL 
-
-if(Serial.available()>0){    // SE TIVER ALGUM DADO NA SERIAL
-    
-    /*CONVERSÃO STRING PARA CHAR*/
-    valor_recebido = Serial.readString();
-    int valor_len = valor_recebido.length() + 1;
-    char valor_array[valor_len];
-    valor_recebido.toCharArray(valor_array,valor_len);
-    /*--------------------------------*/
-    
-       Serial.print(valor_array);
-       if(strcmp(valor_array,"ligar")==0){
-        estadoled =! estadoled;
-        digitalWrite(23,estadoled);
-      }
-        
-
+void launchTasks(){     // Lança as taks
+    delay(500);
 }
 
-}
