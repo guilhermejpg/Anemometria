@@ -21,6 +21,7 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 
 
 /*-----------------VARIAVEIS-E-OUTROS---------------------*/
+#define TUNEL 17    // Pino que ligara o tunel 
 #define ledboard 2     // LED DO ESP
 #define ledverde 25    // LED TESTE
 #define BUFFERLEN 10   // Tamanho em bytes do buffer que armazena a mensagem recebida         
@@ -51,6 +52,8 @@ void setupWireless();   // inicialização do wireless
 void launchTasks();     // Dispara as tasks.
 void checkValue();      // avalia a mensagem recebida via tcp e ajusata as saidas
 void connectClient();   // Inicialização da conexão ao Server
+void RPMStart();        // Liga tunel
+void RPMStop();         // Desliga tunel
 /*---------------------------------------*/
 
 
@@ -115,6 +118,8 @@ void taskTcpCode(void * parameters) {   // LEITURA DOS DADOS RECEBIDOS DO SERVER
 void setupPins(){ // PINAGEM
   pinMode(ledboard,OUTPUT);
   pinMode(ledverde,OUTPUT);
+  pinMode(TUNEL,OUTPUT);
+  digitalWrite(TUNEL, LOW);
   digitalWrite(ledverde, LOW);
   digitalWrite(ledboard,LOW);
 }
@@ -136,12 +141,13 @@ void launchTasks(){   // Lançando as tasks
 
 void checkValue()   // Checa a mensagem e realiza tarefa
  {
-   Serial.println(mensagemTcpIn);
+   Serial.println(mensagemTcpIn);// PRINTAR VALOR
    if(strcmp(mensagemTcpIn,"ligar") ==0){
             digitalWrite(ledverde,HIGH);
+            RPMStart();
               }  
   if(strcmp(mensagemTcpIn,"desligar") ==0){
-  
+      RPMStop();
               digitalWrite(ledverde,LOW);  
         }
  }
@@ -149,4 +155,13 @@ void checkValue()   // Checa a mensagem e realiza tarefa
 void connectClient(){ // Conexão ao server
 while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}  // fica nesse loop até reconectar ao server
 }
+
+void RPMStart(){    // LIGA TUNEL
+  digitalWrite(TUNEL, HIGH);
+}
+
+void RPMStop(){     // DESLIGA TUNEL
+  digitalWrite(TUNEL, LOW);
+}
+
 /*---------------------------------------*/
