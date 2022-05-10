@@ -27,7 +27,7 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 #define PORTA 80       // PORTA DO SERVER
 #define PERIODO 1000   // Periodo de reconexao e update em ms
 char mensagemTcpIn[64] = ""; //variavel global com a mensagem recebiada via TCP
-char mensagemclean[64] = "";  // Limpando BUFFER apos receber msg
+char mensagemclean[64] = "   ";  // Limpando BUFFER apos receber msg
 TickType_t taskDelay = 5 / portTICK_PERIOD_MS; // ciração do delay em ms para tasks
 /*---------------------------------------*/
 
@@ -51,7 +51,6 @@ void setupWireless();   // inicialização do wireless
 void launchTasks();     // Dispara as tasks.
 void checkValue();      // avalia a mensagem recebida via tcp e ajusata as saidas
 void connectClient();   // Inicialização da conexão ao Server
-void Clean();           // Limpa buffer
 /*---------------------------------------*/
 
 
@@ -70,7 +69,8 @@ void setup() {
 
 
 /*-----------------LOOP----------------------*/
-void loop() {
+void loop() { // Responsavel por reconetar o wifi e parar a comunicação com o server quando a conexão cair
+  
   if(WiFi.status() != WL_CONNECTED){
     setupWireless();
     Server.stop();
@@ -84,24 +84,21 @@ delay(100);
 
 
 
-
 /*----------------TASKS-----------------------*/
 void taskTcpCode(void * parameters) {   // LEITURA DOS DADOS RECEBIDOS DO SERVER
  while(true) {
         while(Server.connected()){  // Equanto estinver conectado
         if(Server.available()>0){   // se o servidor estiver mandando dados
-        
-        int i = 0;                  
-        char bufferEntrada[BUFFERLEN] = "";
-        while(Server.available()>0){   //enquanto o servidor estiver mandando algo
+        int buffersize = 0;    // tamanho do buffer              
+        char bufferEntrada[BUFFERLEN] = ""; // BUFFER para mensagem recebida
+        while(Server.available()>0){   //enquanto o servidor estiver mandando algo(loop que realiza a leitura)
         char mensagem = Server.read(); 
-          bufferEntrada[i] = mensagem;
-            i++;
+          bufferEntrada[buffersize] = mensagem;
+            buffersize++;
         }
-    
-        strncpy(mensagemTcpIn,bufferEntrada,i); // copiando o que foi recebido(buffer) a variavel de leitura
-        checkValue();  // função que ira reconhecer a mensagem  
-       
+        strncpy(mensagemTcpIn,bufferEntrada,buffersize); // copiando o que foi recebido(buffer) a variavel de leitura
+        checkValue();    // função que ira reconhecer a mensagem  
+        strncpy(mensagemTcpIn,mensagemclean,buffersize); //Limpando buffer após realizar a tarefa
         }
         vTaskDelay(taskDelay); 
  }
@@ -115,7 +112,7 @@ void taskTcpCode(void * parameters) {   // LEITURA DOS DADOS RECEBIDOS DO SERVER
 
 
 /*----------------FUNÇOES-----------------------*/
-void setupPins(){
+void setupPins(){ // PINAGEM
   pinMode(ledboard,OUTPUT);
   pinMode(ledverde,OUTPUT);
   digitalWrite(ledverde, LOW);
@@ -132,28 +129,24 @@ void setupWireless(){   // Parametros Wireless
   }
 }
 
-void launchTasks(){   // Lançandos as tasks
-  xTaskCreatePinnedToCore(taskTcpCode,"TRAFEGO TCP",10000,NULL,1,NULL,0);
+void launchTasks(){   // Lançando as tasks
+  xTaskCreatePinnedToCore(taskTcpCode,"TRAFEGO TCP",10000,NULL,1,NULL,0); // task de leitura TCP rodando no core 0
    delay(500);
 }
 
-void checkValue()   //Checar valor e fazer tarefa
+void checkValue()   // Checa a mensagem e realiza tarefa
  {
+   Serial.println(mensagemTcpIn);
    if(strcmp(mensagemTcpIn,"ligar") ==0){
             digitalWrite(ledverde,HIGH);
-            Clean();
               }  
-            if(strcmp(mensagemTcpIn,"desligar") ==0){
-            Clean();
+  if(strcmp(mensagemTcpIn,"desligar") ==0){
+  
               digitalWrite(ledverde,LOW);  
         }
  }
 
 void connectClient(){ // Conexão ao server
-while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}
-}
-
-void Clean(){ // Limpabndo buffer após realizar a tarefa
-strncpy(mensagemTcpIn,mensagemclean,64);
+while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}  // fica nesse loop até reconectar ao server
 }
 /*---------------------------------------*/
