@@ -15,18 +15,18 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 #include <Arduino.h>
 #include <WiFi.h>
 #include <SPI.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
-#include <WebSocketsClient.h>
+#include <Wire.h>
+#include <Adafruit_MCP4725.h>
 
 
 /*-----------------VARIAVEIS-E-OUTROS---------------------*/
-#define TUNEL 17    // Pino que ligara o tunel 
+#define TUNEL 17    // Pino que ligara o tunel
 #define ledboard 2     // LED DO ESP
 #define ledverde 25    // LED TESTE
 #define BUFFERLEN 10   // Tamanho em bytes do buffer que armazena a mensagem recebida         
 #define PORTA 80       // PORTA DO SERVER
 #define PERIODO 1000   // Periodo de reconexao e update em ms
+Adafruit_MCP4725 DAC;
 char mensagemTcpIn[64] = ""; //variavel global com a mensagem recebiada via TCP
 char mensagemclean[64] = "   ";  // Limpando BUFFER apos receber msg
 TickType_t taskDelay = 5 / portTICK_PERIOD_MS; // ciração do delay em ms para tasks
@@ -61,6 +61,7 @@ void RPMStop();         // Desliga tunel
 void setup() {
   Server.setTimeout(100);  // Tempo para considerar a conexão como perdida
   Serial.begin(115200);    // Iniciando a serial
+  DAC.begin(0x60);         // Iniciando o DAC ( 0 - 4095)
   setupPins();             // Chamando a função dos parametros dos pinos
   setupWireless();         // Chamando a função dos parametros do Wiriless 
   connectClient();         // Chamando a função de conexão ao server
@@ -122,6 +123,7 @@ void setupPins(){ // PINAGEM
   digitalWrite(TUNEL, LOW);
   digitalWrite(ledverde, LOW);
   digitalWrite(ledboard,LOW);
+  DAC.setVoltage(0, false);
 }
 
 void setupWireless(){   // Parametros Wireless
@@ -143,11 +145,13 @@ void checkValue()   // Checa a mensagem e realiza tarefa
  {
    Serial.println(mensagemTcpIn);// PRINTAR VALOR
    if(strcmp(mensagemTcpIn,"ligar") ==0){
+            DAC.setVoltage(4095, false);
             digitalWrite(ledverde,HIGH);
             RPMStart();
               }  
   if(strcmp(mensagemTcpIn,"desligar") ==0){
       RPMStop();
+            DAC.setVoltage(0, false);
               digitalWrite(ledverde,LOW);  
         }
  }
