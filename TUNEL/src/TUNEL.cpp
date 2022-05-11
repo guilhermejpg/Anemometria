@@ -17,7 +17,7 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_MCP4725.h>
-
+#include <MCP_DAC.h>
 
 /*-----------------VARIAVEIS-E-OUTROS---------------------*/
 #define TUNEL 17    // Pino que ligara o tunel
@@ -26,10 +26,11 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 #define BUFFERLEN 10   // Tamanho em bytes do buffer que armazena a mensagem recebida         
 #define PORTA 80       // PORTA DO SERVER
 #define PERIODO 1000   // Periodo de reconexao e update em ms
-Adafruit_MCP4725 DAC;
 char mensagemTcpIn[64] = ""; //variavel global com a mensagem recebiada via TCP
 char mensagemclean[64] = "   ";  // Limpando BUFFER apos receber msg
+bool control = false;
 TickType_t taskDelay = 5 / portTICK_PERIOD_MS; // ciração do delay em ms para tasks
+MCP4921 MCP;
 /*---------------------------------------*/
 
 
@@ -59,13 +60,16 @@ void RPMStop();         // Desliga tunel
 
 /*----------------SETUP-----------------------*/
 void setup() {
+  MCP.selectVSPI();     // needs to be called before begin()
+  MCP.begin(5);         // 5 for VSPI and 15 for HSPI
   Server.setTimeout(100);  // Tempo para considerar a conexão como perdida
   Serial.begin(115200);    // Iniciando a serial
-  DAC.begin(0x60);         // Iniciando o DAC ( 0 - 4095)
   setupPins();             // Chamando a função dos parametros dos pinos
   setupWireless();         // Chamando a função dos parametros do Wiriless 
   connectClient();         // Chamando a função de conexão ao server
   launchTasks();           // Lançando as tasks
+ 
+
 }
 /*---------------------------------------*/
 
@@ -123,7 +127,8 @@ void setupPins(){ // PINAGEM
   digitalWrite(TUNEL, LOW);
   digitalWrite(ledverde, LOW);
   digitalWrite(ledboard,LOW);
-  DAC.setVoltage(0, false);
+  MCP.analogWrite(0, 0);
+
 }
 
 void setupWireless(){   // Parametros Wireless
@@ -143,15 +148,26 @@ void launchTasks(){   // Lançando as tasks
 
 void checkValue()   // Checa a mensagem e realiza tarefa
  {
-   Serial.println(mensagemTcpIn);// PRINTAR VALOR
-   if(strcmp(mensagemTcpIn,"ligar") ==0){
-            DAC.setVoltage(4095, false);
+  Serial.println(mensagemTcpIn);// PRINTAR VALOR
+  int rpm = atoi(mensagemTcpIn);
+   if(strcmp(mensagemTcpIn,"rpm") == 0){
+      control =! control;
+   }
+ 
+ if(control == true){
+  MCP.analogWrite(rpm, 0);
+ }
+  
+ 
+  
+   if(strcmp(mensagemTcpIn,"ligar") == 0){
+          MCP.analogWrite(4095, 0);
             digitalWrite(ledverde,HIGH);
             RPMStart();
               }  
-  if(strcmp(mensagemTcpIn,"desligar") ==0){
+  if(strcmp(mensagemTcpIn,"desligar") == 0){
       RPMStop();
-            DAC.setVoltage(0, false);
+              MCP.analogWrite(0, 0);
               digitalWrite(ledverde,LOW);  
         }
  }
