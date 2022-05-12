@@ -5,7 +5,7 @@ O esp controlara a rotação do inversor de frequencia(Tunel) a partir de dados 
 O esp recebera comdandos como frases e valores numericos e fará a tarefa correspondente ao comando enviado.
 
 O Processador 1 (loop) é dedicado a reconexão
-O processador 0 é dedicado a receber os dados e administrar o buffer
+O processador 0 é dedicado a receber os dados, e realizar as tarefas
 
  // IP SERVER 192.168.4.1
  // Ip do TUNEL 192.168.4.2
@@ -28,9 +28,11 @@ O processador 0 é dedicado a receber os dados e administrar o buffer
 #define PERIODO 1000   // Periodo de reconexao e update em ms
 char mensagemTcpIn[64] = ""; //variavel global com a mensagem recebiada via TCP
 char mensagemclean[64] = "   ";  // Limpando BUFFER apos receber msg
-bool control = false;
+bool control = false;   // booleana de controle da rotação
+int rpm_min = 201;      // velocidade minina(2m/s) - valor que o dac le 
+int rpm;                // variavel que armazena a velociadde enviada
 TickType_t taskDelay = 5 / portTICK_PERIOD_MS; // ciração do delay em ms para tasks
-MCP4921 MCP;
+MCP4921 MCP;      //objeto direcioando ao DAC 
 /*---------------------------------------*/
 
 
@@ -55,21 +57,20 @@ void checkValue();      // avalia a mensagem recebida via tcp e ajusata as saida
 void connectClient();   // Inicialização da conexão ao Server
 void RPMStart();        // Liga tunel
 void RPMStop();         // Desliga tunel
+void rotacao();         // Altera rotação
 /*---------------------------------------*/
 
 
 /*----------------SETUP-----------------------*/
 void setup() {
-  MCP.selectVSPI();     // needs to be called before begin()
-  MCP.begin(5);         // 5 for VSPI and 15 for HSPI
+  MCP.selectVSPI();        // needs to be called before begin()
+  MCP.begin(5);            // 5 for VSPI and 15 for HSPI
   Server.setTimeout(100);  // Tempo para considerar a conexão como perdida
   Serial.begin(115200);    // Iniciando a serial
   setupPins();             // Chamando a função dos parametros dos pinos
   setupWireless();         // Chamando a função dos parametros do Wiriless 
   connectClient();         // Chamando a função de conexão ao server
   launchTasks();           // Lançando as tasks
- 
-
 }
 /*---------------------------------------*/
 
@@ -148,40 +149,43 @@ void launchTasks(){   // Lançando as tasks
 
 void checkValue()   // Checa a mensagem e realiza tarefa
  {
-  Serial.println(mensagemTcpIn);// PRINTAR VALOR
-  int rpm = atoi(mensagemTcpIn);
-   if(strcmp(mensagemTcpIn,"rpm") == 0){
-      control =! control;
-   }
- 
- if(control == true){
-  MCP.analogWrite(rpm, 0);
- }
+Serial.println(mensagemTcpIn);// PRINTAR VALOR
+rpm = atoi(mensagemTcpIn);    // CHAR PARA INT
+
+if(control == true) {rotacao();}  // CHAMA A FUNÇÃO DE TROCA DE ROTAÇÃO
   
- 
-  
-   if(strcmp(mensagemTcpIn,"ligar") == 0){
-          MCP.analogWrite(4095, 0);
-            digitalWrite(ledverde,HIGH);
-            RPMStart();
-              }  
-  if(strcmp(mensagemTcpIn,"desligar") == 0){
-      RPMStop();
-              MCP.analogWrite(0, 0);
-              digitalWrite(ledverde,LOW);  
-        }
+if(strcmp(mensagemTcpIn,"run") == 0) {RPMStart();}  // QUANDO FOR RECEBIDO A MSG 'RUN' LIGA O TUNEL
+
+if(strcmp(mensagemTcpIn,"stop") == 0) {RPMStop();}  // QUANDO FOR RECEBIDO A MSG 'STOP' DESLIGA O TUNEL
  }
 
 void connectClient(){ // Conexão ao server
 while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}  // fica nesse loop até reconectar ao server
 }
 
-void RPMStart(){    // LIGA TUNEL
+void RPMStart(){  // LIGA TUNEL
+  Serial.println("TUNEL:ON");
+            digitalWrite(ledverde,HIGH);
+            MCP.analogWrite(rpm_min, 0);
+            control = true;
   digitalWrite(TUNEL, HIGH);
 }
 
-void RPMStop(){     // DESLIGA TUNEL
+void RPMStop(){   // DESLIGA TUNEL
+   Serial.println("TUNEL:OFF");
+   MCP.analogWrite(0, 0);
+             control = false;
+              delay(200);
+              digitalWrite(ledverde,LOW);  
   digitalWrite(TUNEL, LOW);
+  
 }
 
+void rotacao(){   // CONTROLA O DAC - ALTERA ROTAÇÃO
+  if(rpm <= 201){
+     rpm = 201;
+   }
+  Serial.println("CONTROLE DE ROTAÇÃO:ON");
+  MCP.analogWrite(rpm, 0);
+}
 /*---------------------------------------*/
