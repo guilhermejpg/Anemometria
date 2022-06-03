@@ -29,7 +29,6 @@ O processador 0 é dedicado a receber os dados, e realizar as tarefas
 char mensagemTcpIn[64] = ""; //variavel global com a mensagem recebiada via TCP
 char mensagemclean[64] = "   ";  // Limpando BUFFER apos receber msg
 bool control = false;   // booleana de controle da rotação
-int rpm_min = 201;      // velocidade minina(2m/s) - valor que o dac le 
 int rpm;                // variavel que armazena a velociadde enviada
 TickType_t taskDelay = 5 / portTICK_PERIOD_MS; // ciração do delay em ms para tasks
 MCP4921 MCP;      //objeto direcioando ao DAC 
@@ -166,7 +165,6 @@ while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}  // fica nesse loop a
 void RPMStart(){  // LIGA TUNEL
   Serial.println("TUNEL:ON");
             digitalWrite(ledverde,HIGH);
-            MCP.analogWrite(rpm_min, 0);
             control = true;
   digitalWrite(TUNEL, HIGH);
 }

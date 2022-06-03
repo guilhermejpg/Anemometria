@@ -40,10 +40,7 @@ String leSerial(){                // FUNÇÃO PARA LER A SERIAL
     // Aguarda buffer serial ler próximo caractere
     delay(10);
   }
-    
-  Serial.print("Recebi: ");
-  Serial.println(conteudo);
-    
+  
   return conteudo;
 }           
 /*---------------------------------------*/
@@ -61,7 +58,6 @@ WiFiClient  tunelClient;              // cliente direcionado ao tunel
 void setupWifi();   // Setup Servidor
 void launchTasks();   // Inicia as tasks
 /*---------------------------------------*/
-
 
 /*-------------VOID-SETUP-------------*/
 void setup() {
