@@ -10,7 +10,7 @@ from nidaqmx.constants import AcquisitionType
 from nidaqmx.constants import TerminalConfiguration
 
 
-#/------------------------------------VARIAVEIS GLOBAIS---------------------------------------------------#/
+#/--------------------------------------VARIAVEIS GLOBAIS---------------------------------------------------#/
 
 padraom =   []            # lista Media do mA - Principal
 padraos =   []            # lista desvio mA - Principal
