@@ -22,9 +22,9 @@ O processador 0 é dedicado a receber os dados, e realizar as tarefas
 /*-----------------VARIAVEIS-E-OUTROS---------------------*/
 #define ledboard 2     // LED DO ESP
 #define TUNEL 25       // LED TESTE
-#define mspeed1        // Pino 1 do multspeed(AD4)
-#define mspeed2        // Pino 2 do multspeed(AD5)
-#define mspeed3        // Pino 3 do multspeed(AD6)
+#define mspeed1 33       // Pino 1 do multspeed(AD4)
+#define mspeed2 32       // Pino 2 do multspeed(AD5)
+#define mspeed3 35     // Pino 3 do multspeed(AD6)
 #define BUFFERLEN 10   // Tamanho em bytes do buffer que armazena a mensagem recebida         
 #define PORTA 80       // PORTA DO SERVER
 #define PERIODO 1000   // Periodo de reconexao e update em ms
