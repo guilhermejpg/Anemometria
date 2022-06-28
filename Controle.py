@@ -24,12 +24,8 @@ pulsoss = []
 variavel = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','Pulsos','Desvio(Pulsos)']
 variavel2 = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','mA2', 'Desvio(mA2)']
 
-<<<<<<< HEAD
 rpm = [0,161,198,231,264,301,335,369,404,438,470,507,542,574]     # pontos da calibração - Copos(Pulsos)
 rpm2 = [0,195,200,228,263,298,330,364,398,433,466,499,533,569]     # pontos da calibração - Copos(mA)
-=======
-#/--------------------------------------VARIAVEIS GLOBAIS---------------------------------------------------#/
->>>>>>> 85d141275983d1522051ff232b0e7100d8022c24
 
 def convert(rpm):
     return (rpm/1683)*4095
