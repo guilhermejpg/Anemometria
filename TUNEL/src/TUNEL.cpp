@@ -170,7 +170,6 @@ while (!Server.connect(WiFi.gatewayIP(), PORTA)) {return;}  // fica nesse loop a
 
 void RPMStart(){  // LIGA TUNEL
   Serial.println("TUNEL:ON");
-            digitalWrite(ledverde,HIGH);
             control = true;
   digitalWrite(TUNEL, HIGH);
 }
@@ -180,7 +179,6 @@ void RPMStop(){   // DESLIGA TUNEL
    MCP.analogWrite(0, 0);
              control = false;
               delay(200);
-              digitalWrite(ledverde,LOW);  
   digitalWrite(TUNEL, LOW);
   
 }
