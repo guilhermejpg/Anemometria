@@ -1,64 +1,103 @@
-import serial       # Biblioteca Comunicação Serial
-import time         # biblioteca do tempo
-import numpy as np  
+import serial #Importa a biblioteca
+import time     #biblioteca do tempo
+import numpy as np
 import pandas as pd
-import sys  
-import threading    # Biblioteca para multi-threading(multitask)
+import sys
+import nidaqmx
+import threading
 import os
-import nidaqmx      # Bibliotecas da placa da national
-from nidaqmx.constants import AcquisitionType       
+from nidaqmx.constants import AcquisitionType
 from nidaqmx.constants import TerminalConfiguration
 
+padraom = []            # lista mA
+padraos = []            # lista desvio mA
+padraom2 = []            # lista mA - secundario
+padraos2 = []            # lista desvio mA - secundario
+pressao = []
+jato = []
+seco = []
+umido = []
+freqs = []
+freqm = []
+pulsosm = []
+pulsoss = []
+variavel = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','Pulsos','Desvio(Pulsos)']
+variavel2 = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','mA2', 'Desvio(mA2)']
 
-#/------------------------------------VARIAVEIS GLOBAIS---------------------------------------------------#/
+rpm = [0,161,198,231,264,301,335,369,404,438,470,507,542,574]     # pontos da calibração - Copos(Pulsos)
+rpm2 = [0,195,200,228,263,298,330,364,398,433,466,499,533,569]     # pontos da calibração - Copos(mA)
 
-padraom =   []            # lista Media do mA - Principal
-padraos =   []            # lista desvio mA - Principal
-padraom2 =  []            # lista Media do mA - Secundario
-padraos2 =  []            # lista desvio mA - Secundario
-pressao =   []            # Lista para Pressão
-jato =      []            # Lista para Media da Temperatura "Jato"
-seco =      []            # Lista para Media da Temperatura "Seco"
-umido =     []            # Lista para Media da Temperatura "Umido"
-pulsosm =   []            # Lista para Media da Frequencia
-pulsoss =   []            # Lista para Desvio da frequencia
-
-variavel = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','Pulsos','Desvio(Pulsos)'] # Variaveis aquisitadas
-
-rpm = [0,161,196,231,263,299,334,368,403,436,471,506,538,573]     # pontos da calibração
-#/------------------------------------------------------------------------------------#/
-
-
-
-
-#/------------------------------------FUNÇÕES--------------------------------------------------#/
-
-def convert(rpm): #Função Conversão rpm para valor DAC
+def convert(rpm):
     return (rpm/1683)*4095
+rampa = list(map(convert,rpm))
 
-rampa = list(map(convert,rpm)) # Aplicando a função 'convert' em todos os rpm's (Pontos da calibração)
 
-def temp(): # Função para ler temperatura dos sensores a partir do arquivo de texto
-    
-    j =[]   # lista que recebe os valores na parte do jato
-    s =[]   # lista que recebe os valores na parte do seco
-    u = []  # lista que recebe os valores na parte do umido
-    
-    arquivo = open("C:/Users/guilhermeas/Desktop/ko.txt", "r") #abrindo arquivo
-    dados =arquivo.readlines()  # readlines le linha por linha e adiciona em uma lista / read le o arquivo todo 
-    comp = len(dados)           # descobrindo o N de linhas( ou numero de elementos na lista)
-    inicio = comp - 30          # Inicio da nossa faixa
-    final = comp -1             # final da nossa faixa (penultima linha)
-    faixa = (list(dados[inicio:final])) # Fatiando a faixa de linhas que desejamos e transformando em lista
+def convert(rpm2):
+    return (rpm2/1683)*4095
+rampa2 = list(map(convert,rpm2))
 
-    for linha in faixa:         # para cada linha dentro da faixa
-        tr164 = linha[24:29]   
-        tr163 = linha[34:39]   
-        tr166 = linha[44:49]    
+
+rpm3 = [0,]     # pontos da calibração - EXTRA
+
+def convert(rpm3):
+    return (rpm3/1683)*4095
+rampa3 = list(map(convert,rpm3))
+
+def young():
+    vel = []
+    dire = []
+    arquivo = open("C:/Users/guilhermeas/Desktop/teraterm.log", "r")
+    dados =arquivo.readlines()
+    comp = len(dados)
+    inicio = comp - 30
+    final = comp - 1
+    faixa = (list(dados[inicio:final]))
+
+    for linha in faixa:
+        valor = linha[2:6]
+        grau = linha[7:10]
+        vel.append(format(float(valor), '.1f'))
+        dire.append(format(float(grau), '.1f'))
+
+            
+
+    else:
+        valor_array = np.array(vel)
+        dire_array = np.array(dire)
+        valorf = valor_array.astype(float)
+        diref = dire_array.astype(float)
+        direm = diref.mean()
+        dire_desv = diref.std()
+        valorm = valorf.mean()
+        desv = valorf.std()
+        #print(vel)
+        print('Velocidade: ' + str(format(valorm, '.2f'))+ ' '+ str(format(desv, '.2f')))
+        print('Direção: ' + str(format(direm, '.2f'))+ ' '+ str(format(dire_desv, '.2f')))
+        arquivo.close()
+
+
+
+def temp():
+    j =[]
+    s =[]
+    u = []
+    arquivo = open("C:/Users/guilhermeas/Desktop/ko.txt", "r")
+    dados =arquivo.readlines()
+    comp = len(dados)
+    inicio = comp - 30 
+    final = comp -1
+    faixa = (list(dados[inicio:final]))
+
+    for linha in faixa:
+        
+        tr164 = linha[24:29]
+        tr163 = linha[34:39]
+        tr166 = linha[44:49]
         j.append(format(float(tr164), '.1f'))
         s.append(format(float(tr163), '.1f'))
         u.append(format(float(tr166), '.1f'))
             
+
     else:
         tr164_array = np.array(j)
         tr163_array = np.array(s)
@@ -77,7 +116,7 @@ def temp(): # Função para ler temperatura dos sensores a partir do arquivo de 
         print('Umido: ' + str(format(um, '.1f')))
         arquivo.close()
            
-def PA16(): # função para ler o barometro
+def PA16():
     com = serial.Serial("COM5", timeout=3)
 
     def ler_ponto(com):
@@ -99,10 +138,8 @@ def PA16(): # função para ler o barometro
         pressao.append(str(format(valm, '.3f')))
         break
 
-def ni(): # função para contar os pulsos
-    freq = []        # Lista para Frequencia medida                 
-    freqs =     []   # Lista para Desvio da frequencia
-    freqm =     []   # Lista para Media da Frequencia
+def ni():
+    freq = []
     ref = 5
     minimo = 3
     maximo = 9.9
@@ -110,11 +147,11 @@ def ni(): # função para contar os pulsos
     adcminimo = 0
     adcmaximo = 10
     while True:
-        for j in range(3):
+        for j in range(30):
                 print("Contando Pulsos...")
                 with nidaqmx.Task() as task:
                         freq_aq = 4000
-                        total_samples = 30*freq_aq
+                        total_samples = 5*freq_aq
                         canal = task.ai_channels.add_ai_voltage_chan("Dev1/ai0", min_val=adcminimo, max_val=adcmaximo)
                         task.timing.cfg_samp_clk_timing(freq_aq,sample_mode = AcquisitionType.CONTINUOUS)
                         medicoes = task.read(number_of_samples_per_channel=total_samples, timeout=total_samples/freq_aq+10)
@@ -147,8 +184,10 @@ def ni(): # função para contar os pulsos
                 print(format(float(freqm), '.3f')+ " Hz")
                 print(format(float(freqs), '.3f'))
                 break
+
+
         
-def druck(): # FUnção para ler o multimetro Principal
+def druck():
     tempo = 30
 
     com = serial.Serial("COM1", timeout=1)
@@ -174,10 +213,10 @@ def druck(): # FUnção para ler o multimetro Principal
         padraos.append(format(vals*1000, '.3f'))
         break
 
-def druck2(): #FUnção para ler o multimetro Secundario
+def druck2():
     tempo = 30
 
-    com = serial.Serial("COM19", timeout=1)
+    com = serial.Serial("COM6", timeout=1)
 
     def ler_ponto(com):
         valores = []
@@ -200,15 +239,20 @@ def druck2(): #FUnção para ler o multimetro Secundario
         padraos2.append(format(vals*1000, '.3f'))
         break
 
-#/------------------------------------------------------------------------------------#/
-
-
-
-#/-------------------------------INICIALIZAÇÃO-----------------------------------------#/   
-
+    
 print("Digite 'run' para ligar o tunel\n")
 print("Digite 'stop' para desligar o tunel\n")
-print("Digite 'copos' para iniciar a calibração de copos\n")
+print("Digite 'copos' para iniciar a calibração de copos - Pulsos\n")
+print("Digite 'copos2' para iniciar a calibração de copos - mA\n")
+print("Digite 'aqr' para aquisitar temperatura,pressão e mA\n")
+print("Digite 'pa'  para aquisitar pressão\n")
+print("Digite 'temp' para aquisitar temperatura\n")
+print("Digite 'pulsos' para aquisitar pulsos\n")
+print("Digite 'druck' para aquisitar o multimetro Principal\n")
+print("Digite 'druck2' para aquisitar o multimetro Secundario\n")
+print("Digite 'young' para aquisitar o ultrasonico young\n")
+
+
 
 while True: #Loop para a conexão com o Arduino
     try:  #Tenta se conectar, se conseguir, o loop se encerra
@@ -220,10 +264,7 @@ while True: #Loop para a conexão com o Arduino
     except:
         pass
 
- #/------------------------------------------------------------------------------------#/   
-
-#/------------------------------------------------------------------------------------#/
-
+    
 while True: #Loop principal
     
     print('\n')   
@@ -242,22 +283,79 @@ while True: #Loop principal
     if( cmd == 'druck'):    #Função para ler o druck
         druck()
 
-    if(cmd == 'aqr'):   # Aquisitar tudo
-        PA16()
-        temp()
+    if( cmd == 'druck2'):    #Função para ler o druck
+        druck2()
+
+    if( cmd == 'young'):    #Função para ler o druck
+        young()
+
+    if(cmd == 'aqr'):
         druck()
+        threading.Thread(target=PA16).start()
+        threading.Thread(target=temp).start()
+       
         
-    if(cmd == 'pulsos'):    # Aquisitar pulsos
+    if(cmd == 'pulsos'):
         ni()
 
-    if( cmd == 'pa'):    #Função para ler o barometro
+    if( cmd == 'pa'):    #Função para ler o druck
         PA16()
 
-    if( cmd == 'temp'):    #Função para ler a temperatura
+    if( cmd == 'temp'):    #Função para ler o druck
         temp()
 
-    if( cmd == 'embraport'):    
-        threading.Thread(target=druck).start()
+    if( cmd == 'copos2'):  #Calibração de Copos - mA   
+        try:
+            os.remove('C:/Users/guilhermeas/Desktop/calibracao.xlsx')
+        except OSError as e:
+            print(f"Error:{ e.strerror}\n")
+        padraom = []
+        padraos = []
+        padraom2 = []
+        padraos2 = []  
+        pressao = []
+        jato = []
+        seco = []
+        umido = []
+        liga = 'run'
+        arduino.write(liga.encode())
+        arduino.flush() #Limpa a comunicação
+        print('Iniciando Calibração')
+        time.sleep(3)
+        
+        for i in range(1,len(rampa2)):   #Loop de troca de rotação e aquisição
+            print("\nRealizando ponto:" + str(i))
+            print('Ajustando velocidade...')
+            arduino.write(str(round(rampa2[i])).encode())
+            arduino.flush() #Limpa a comunicação
+            time.sleep(15)
+            print('Estabilizando...')
+            print('Medindo Ambiente')
+            time.sleep(15)
+            print('Medindo Padrão...')
+            threading.Thread(target=druck2).start()
+            PA16()
+            temp()
+            druck()
+            
+            df = pd.DataFrame((zip(padraom, padraos,jato,seco,umido,pressao,padraom2,padraos2)), columns = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','mA2', 'Desvio(mA2)'])
+
+            for coluna in variave2l:
+
+                df[coluna]     = df[coluna].astype(str)
+                df[coluna]      = df[coluna].str.replace('.',',')
+    
+            else:
+                df.to_excel('C:/Users/guilhermeas/Desktop/calibracao.xlsx', index = False)
+                print(df)
+                time.sleep(2)
+        else:
+            print('\nCalibração Finalizada\n')
+            rpmmin = 0
+            arduino.write(str(rpmmin).encode())
+            arduino.flush() #Limpa a comunicação
+            
+
 
     if (cmd.isdigit()):     #Função para enviar rotação(valor numerico)
         value = int(cmd)
@@ -268,7 +366,7 @@ while True: #Loop principal
         arduino.flush() #Limpa a comunicação
         
 
-    if( cmd == 'copos'):        # Função de calibração de copos
+    if( cmd == 'copos'):        # Calibração de Copos - Pulsos
         try:
             os.remove('C:/Users/guilhermeas/Desktop/calibracao.xlsx')
         except OSError as e:
@@ -305,18 +403,21 @@ while True: #Loop principal
             time.sleep(1)
             threading.Thread(target=druck).start()
             ni()
+            time.sleep(1)
             df = pd.DataFrame((zip(padraom, padraos,jato,seco,umido,pressao,pulsosm,pulsoss)), columns = ['mA', 'Desvio(mA)','Jato','Seco','Umido','Pressão(kPa)','Pulsos','Desvio(Pulsos)'])
             for coluna in variavel:
 
                 df[coluna]     = df[coluna].astype(str)
-                df[coluna]      =df[coluna].str.replace('.',',')
+                df[coluna]     = df[coluna].str.replace('.',',')
     
             else:
                 df.to_excel('C:/Users/guilhermeas/Desktop/calibracao.xlsx', index = False)
                 print(df)
+                time.sleep(2)
         else:
             print('\nCalibração Finalizada\n')
             rpmmin = 0
             arduino.write(str(rpmmin).encode())
             arduino.flush() #Limpa a comunicação
+
             
