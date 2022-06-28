@@ -180,9 +180,6 @@ void RPMStop(){   // DESLIGA TUNEL
 }
 
 void rotacao(){   // CONTROLA O DAC - ALTERA ROTAÇÃO
-  if(rpm <= 201){
-     rpm = 201;
-   }
   Serial.println("CONTROLE DE ROTAÇÃO:ON");
   MCP.analogWrite(rpm, 0);
 }
