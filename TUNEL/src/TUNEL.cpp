@@ -22,9 +22,6 @@ O processador 0 é dedicado a receber os dados, e realizar as tarefas
 /*-----------------VARIAVEIS-E-OUTROS---------------------*/
 #define ledboard 2     // LED DO ESP
 #define TUNEL 25       // LED TESTE
-#define mspeed1 33       // Pino 1 do multspeed(AD4)
-#define mspeed2 32       // Pino 2 do multspeed(AD5)
-#define mspeed3 35     // Pino 3 do multspeed(AD6)
 #define BUFFERLEN 10   // Tamanho em bytes do buffer que armazena a mensagem recebida         
 #define PORTA 80       // PORTA DO SERVER
 #define PERIODO 1000   // Periodo de reconexao e update em ms
@@ -63,11 +60,11 @@ void rotacao();         // Altera rotação
 
 
 /*----------------SETUP-----------------------*/
-void setup() {
+void setup() { 
   MCP.selectVSPI();        // needs to be called before begin()
   MCP.begin(5);            // 5 for VSPI and 15 for HSPI
+  //dac.begin(0x60);
   Server.setTimeout(100);  // Tempo para considerar a conexão como perdida
-  Serial.begin(115200);    // Iniciando a serial
   setupPins();             // Chamando a função dos parametros dos pinos
   setupWireless();         // Chamando a função dos parametros do Wiriless 
   connectClient();         // Chamando a função de conexão ao server
@@ -125,15 +122,9 @@ void taskTcpCode(void * parameters) {   // LEITURA DOS DADOS RECEBIDOS DO SERVER
 void setupPins(){ // PINAGEM
   pinMode(ledboard,OUTPUT);
   pinMode(TUNEL,OUTPUT);
-  pinMode(mspeed1,OUTPUT);
-  pinMode(mspeed2,OUTPUT);
-  pinMode(mspeed3,OUTPUT);
-  pinMode(mspeed1,LOW);
-  pinMode(mspeed2,LOW);
-  pinMode(mspeed3,LOW);
   digitalWrite(TUNEL, LOW);
   digitalWrite(ledboard,LOW);
-  MCP.analogWrite(0, 0);
+  MCP.analogWrite(4095, 0);
 
 }
 
@@ -184,7 +175,7 @@ void RPMStop(){   // DESLIGA TUNEL
 }
 
 void rotacao(){   // CONTROLA O DAC - ALTERA ROTAÇÃO
-  Serial.println("CONTROLE DE ROTAÇÃO:ON");
-  MCP.analogWrite(rpm, 0);
+ Serial.println("CONTROLE DE ROTAÇÃO:ON");
+ MCP.analogWrite(rpm, 0);
 }
 /*---------------------------------------*/
