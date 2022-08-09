@@ -124,7 +124,7 @@ void setupPins(){ // PINAGEM
   pinMode(TUNEL,OUTPUT);
   digitalWrite(TUNEL, LOW);
   digitalWrite(ledboard,LOW);
-  MCP.analogWrite(4095, 0);
+  MCP.analogWrite(0, 0);
 
 }
 
